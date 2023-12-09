@@ -1,0 +1,230 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: limesurvey
+  labels:
+    istio-injection: enabled
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: limesurvey-app
+  namespace: limesurvey
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: limesurvey-app
+  template:
+    metadata:
+      labels:
+        app: limesurvey-app
+    spec:
+      volumes:
+        - name: ls-tmp-volume
+          persistentVolumeClaim:
+            claimName: ls-tmp-pvc
+        - name: ls-upload-volume
+          persistentVolumeClaim:
+            claimName: ls-upload-pvc
+        - name: ls-config-volume
+          persistentVolumeClaim:
+            claimName: ls-config-pvc
+      containers:
+        - name: limesurvey-container
+          image: gunter04/limesurvey-at-sap:0.1
+          ports:
+            - name: limesurvey-port
+              containerPort: 80
+              protocol: TCP
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "500m"  
+          volumeMounts:
+            - name: ls-tmp-volume
+              mountPath: /app/limesurvey/tmp
+            - name: ls-config-volume
+              mountPath: /app/limesurvey/application/config
+            - name: ls-upload-volume
+              mountPath: /app/limesurvey/upload                            
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+          command: ["/bin/sh"]
+          args: ["-c", "php -S 0.0.0.0:80 -t /app/limesurvey"]  
+      restartPolicy: Always
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: postgresql-db
+  namespace: limesurvey
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql-db
+  template:
+    metadata:
+      labels:
+        app: postgresql-db
+    spec:
+      volumes:
+        - name: postgresql-volume
+          persistentVolumeClaim:
+            claimName: postgresql-data-pvc
+      containers:
+        - name: postgresql-db-container
+          image: postgres:16.1-bullseye
+          env:
+          - name: PGDATA
+            value: /var/lib/postgresql/data
+          - name: POSTGRES_PASSWORD
+            value: limesurvey
+          ports:
+            - name: postgresql-port
+              containerPort: 5432
+              protocol: TCP
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "500m"  
+          volumeMounts:
+            - name: postgresql-volume
+              mountPath: /var/lib/postgresql
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+      restartPolicy: Always
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: limesurvey-service
+  namespace: limesurvey
+  labels:
+    app: limesurvey-app
+spec:
+  ports:
+    - name: limesurvey-port
+      protocol: TCP
+      port: 80
+      targetPort: limesurvey-port
+  selector:
+    app: limesurvey-app
+  type: ClusterIP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgresql-service
+  namespace: limesurvey
+  labels:
+    app: postgresql-db
+spec:
+  ports:
+    - name: postgresql-port
+      protocol: TCP
+      port: 5432
+      targetPort: postgresql-port
+  selector:
+    app: postgresql-db
+  type: ClusterIP
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: postgresql-data-pvc
+  namespace: limesurvey
+  labels:
+    app: postgresql-db
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: default
+  volumeMode: Filesystem
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ls-config-pvc
+  namespace: limesurvey
+  labels:
+    app: limesurvey-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: default
+  volumeMode: Filesystem
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ls-tmp-pvc
+  namespace: limesurvey
+  labels:
+    app: limesurvey-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: default
+  volumeMode: Filesystem
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ls-upload-pvc
+  namespace: limesurvey
+  labels:
+    app: limesurvey-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: default
+  volumeMode: Filesystem
+---
+apiVersion: gateway.kyma-project.io/v1beta1
+kind: APIRule
+metadata:
+  labels:
+    app.kubernetes.io/name: limesurvey-apirule
+  name: limesurvey-apirule
+  namespace: limesurvey
+spec:
+  gateway: kyma-gateway.kyma-system.svc.cluster.local
+  host: apj-sap-survey
+  rules:
+    - accessStrategies:
+        - handler: allow
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH
+        - HEAD
+      path: /.*
+      timeout: 120
+  service:
+    name: limesurvey-service
+    port: 80
+  timeout: 120
