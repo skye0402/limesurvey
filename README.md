@@ -49,7 +49,7 @@ Replace `your-registry` with your actual container registry path.
 2. Apply the Kubernetes YAML files using `kubectl`:
 
 ```bash
-kubectl apply -f k8s-limesurvey.yaml
+kubectl apply -f deploy-limesurvey.yaml
 ```
 
 This command will create all the necessary resources in your Kubernetes cluster.
