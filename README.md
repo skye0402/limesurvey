@@ -29,7 +29,8 @@ Before deploying LimeSurvey on Kubernetes, ensure that you have the following pr
 ### Building the Docker Image
 
 1. Clone the repository and navigate to the directory containing the `Dockerfile`.
-2. Build the Docker image using the following command:
+2. Save the limesurvey.zip file in the folder (you can download it from limesurvey, current version used is limesurvey6.3.8
+3. Build the Docker image using the following command:
 
 ```bash
 docker build -t your-registry/limesurvey:latest .
