@@ -21,41 +21,37 @@ spec:
         app: limesurvey-app
     spec:
       volumes:
-        - name: ls-tmp-volume
+        - name: ls-volume
           persistentVolumeClaim:
-            claimName: ls-tmp-pvc
-        - name: ls-upload-volume
-          persistentVolumeClaim:
-            claimName: ls-upload-pvc
-        - name: ls-config-volume
-          persistentVolumeClaim:
-            claimName: ls-config-pvc
+            claimName: ls-pvc
       containers:
-        - name: limesurvey-container
-          image: gunter04/limesurvey-at-sap:0.1
-          ports:
-            - name: limesurvey-port
-              containerPort: 80
-              protocol: TCP
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "2Gi"
-              cpu: "500m"  
-          volumeMounts:
-            - name: ls-tmp-volume
-              mountPath: /app/limesurvey/tmp
-            - name: ls-config-volume
-              mountPath: /app/limesurvey/application/config
-            - name: ls-upload-volume
-              mountPath: /app/limesurvey/upload                            
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-          imagePullPolicy: Always
-          command: ["/bin/sh"]
-          args: ["-c", "php -S 0.0.0.0:80 -t /app/limesurvey"]  
+      - name: limesurvey-container
+        image: javieryong271/limesurvey:latest
+        ports:
+        - name: limesurvey-port
+          containerPort: 80
+          protocol: TCP
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "500m"  
+        volumeMounts:
+        - name: ls-volume
+          mountPath: /app/limesurvey             
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: Always
+        args: 
+          - "/bin/sh"
+          - "-c"
+          - |
+            if  [ -z "$(ls -A /app/limesurvey)" ]; then
+              unzip /home/* -d /app
+            fi
+            php -S 0.0.0.0:80 -t /app/limesurvey
       restartPolicy: Always
 ---
 kind: Deployment
@@ -82,7 +78,7 @@ spec:
           image: postgres:16.1-bullseye
           env:
           - name: PGDATA
-            value: /var/lib/postgresql/data
+            value: /var/lib/postgresql/data/pgdata
           - name: POSTGRES_PASSWORD
             value: limesurvey
           ports:
@@ -98,7 +94,7 @@ spec:
               cpu: "500m"  
           volumeMounts:
             - name: postgresql-volume
-              mountPath: /var/lib/postgresql
+              mountPath: /var/lib/postgresql/data
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: Always
@@ -157,7 +153,7 @@ spec:
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: ls-config-pvc
+  name: ls-pvc
   namespace: limesurvey
   labels:
     app: limesurvey-app
@@ -166,39 +162,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi
-  storageClassName: default
-  volumeMode: Filesystem
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: ls-tmp-pvc
-  namespace: limesurvey
-  labels:
-    app: limesurvey-app
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: default
-  volumeMode: Filesystem
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: ls-upload-pvc
-  namespace: limesurvey
-  labels:
-    app: limesurvey-app
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Gi
+      storage: 250Gi
   storageClassName: default
   volumeMode: Filesystem
 ---

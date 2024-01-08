@@ -1,4 +1,4 @@
-# Use the postgres:16.1-bullseye base image
+# Use the debian:bullseye base image
 FROM debian:bullseye
 
 # Install PHP and other necessary packages
@@ -19,17 +19,7 @@ WORKDIR /app
 
 # Prepare limesurvey
 COPY limesurvey*.zip /home
-RUN mkdir /app/tmp
-RUN unzip /home/* -d /app
-# RUN mkdir /tmp/tmp
-# RUN mkdir /tmp/upload
-# RUN mkdir /tmp/config
-# RUN cp -r /app/limesurvey/tmp /tmp
-# RUN cp -r /app/limesurvey/upload /tmp
-# RUN cp -r /app/limesurvey/application/config /tmp
-# RUN chmod -R 755 /app/limesurvey/tmp; chown -R $(id -u):$(id -g) /app/limesurvey/tmp
-# RUN chmod -R 755 /app/limesurvey/upload; chown -R $(id -u):$(id -g) /app/limesurvey/upload
-# RUN chmod -R 755 /app/limesurvey/application/config; chown -R $(id -u):$(id -g) /app/limesurvey/application/config
+
 
 # Expose the PHP server port (default is 80)
 EXPOSE 80

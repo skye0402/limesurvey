@@ -47,7 +47,9 @@ Replace `your-registry` with your actual container registry path.
 ### Deploying to Kubernetes
 
 1. Update the image reference in the LimeSurvey deployment YAML file to point to your Docker image.
-2. Apply the Kubernetes YAML files using `kubectl`:
+2. Once the pods are running, run kubectl exec -it pod_name -- bash to enter the shell of your limesurvey container
+3. Within the shell, run this command `unzip /home/* -d /app` to unzip the limesurvey.zip to the app folder
+4. Apply the Kubernetes YAML files using `kubectl`:
 
 ```bash
 kubectl apply -f deploy-limesurvey.yaml
